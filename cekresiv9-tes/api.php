@@ -1,4 +1,15 @@
 <?php
+// Load .env (simple loader)
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+  foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+    if (str_starts_with(trim($line), '#'))
+      continue;
+    [$k, $v] = explode('=', $line, 2);
+    putenv(trim($k) . '=' . trim($v));
+  }
+}
+
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE)
   session_start();
@@ -53,7 +64,11 @@ if ($action === 'cekResi') {
 
   $kurir = mapCourier($kurirRaw);
 
-  $apiKey = "ec63da3c3e07f2b0327ba99822c6dee01a1146095c37309eabee2f4d427c270f"; // <-- isi milik Anda
+  $apiKey = getenv('BINDERBYTE_API_KEY');
+  if (!$apiKey) {
+    err(500, 'API key Binderbyte belum dikonfigurasi');
+  }
+
   $apiUrl = "https://api.binderbyte.com/v1/track?api_key={$apiKey}&courier={$kurir}&awb={$resi}";
 
   $ch = curl_init($apiUrl);
@@ -75,7 +90,7 @@ if ($action === 'cekResi') {
     err($data['status'] ?? 500, $data['message'] ?? 'Gagal mengambil data');
   }
 
-//  Simpan bila diminta & login
+  //  Simpan bila diminta & login
   if ($save === 1 && isset($_SESSION['user'])) {
     $uid = (int) $_SESSION['user']['id'];
     $json = json_encode($data['data'], JSON_UNESCAPED_UNICODE);
